@@ -36,7 +36,7 @@ type alias Model =
 
 init : Int -> Int -> Int -> Model
 init minValue maxValue currentValue =
-    { number = DigitalNumber.make minValue maxValue currentValue
+    { number = DigitalNumber.make minValue maxValue currentValue [ 2, 5 ]
     , currentDigitIndex = 1
     , hasFocus = False
     }
@@ -56,6 +56,9 @@ update msg model =
                         | number =
                             if model.currentDigitIndex == 0 then
                                 DigitalNumber.increaseSign model.number
+
+                            else if model.currentDigitIndex > DigitalNumber.numberOfDigits model.number then
+                                DigitalNumber.increaseDecimalDigit model.number (model.currentDigitIndex - 1 - DigitalNumber.numberOfDigits model.number)
 
                             else
                                 DigitalNumber.increaseDigit model.number (model.currentDigitIndex - 1)
@@ -84,7 +87,7 @@ update msg model =
                 Key.Right ->
                     { model
                         | currentDigitIndex =
-                            if model.currentDigitIndex < DigitalNumber.numberOfDigits model.number then
+                            if model.currentDigitIndex < DigitalNumber.numberOfDigits model.number + DigitalNumber.numberOfDecimalDigits model.number then
                                 model.currentDigitIndex + 1
 
                             else
@@ -109,10 +112,10 @@ digitFontSize =
     30
 
 
-viewDigit : Bool -> Float -> Float -> Char -> Svg msg
+viewDigit : Bool -> Int -> Float -> Char -> Svg msg
 viewDigit selected xV yV d =
     text_
-        [ x (px xV)
+        [ x (px (toFloat <| xV * digitFontSize))
         , y (px yV)
         , fontSize (px (toFloat digitFontSize))
         , fontFamily [ "sans-serif" ]
@@ -144,19 +147,40 @@ view model =
                     viewDigit
                         (i + 1 == model.currentDigitIndex)
                         -- + 1 because the zero'th position is the sign
-                        (toFloat ((i + 1) * digitFontSize))
+                        (i + 1)
                         yPos
                 )
                 digitalNumberChars
 
         signChar : Svg msg
         signChar =
-            viewDigit (model.currentDigitIndex == 0) 0.0 yPos <|
+            viewDigit (model.currentDigitIndex == 0) 0 yPos <|
                 if DigitalNumber.isNegative model.number then
                     '-'
 
                 else
                     '+'
+
+        decimalStartIdx : Int
+        decimalStartIdx =
+            List.length digitalNumberChars + 1
+
+        decimalDigitChars : List (Svg msg)
+        decimalDigitChars =
+            viewDigit
+                False
+                decimalStartIdx
+                yPos
+                ','
+                :: List.indexedMap
+                    (\i d ->
+                        viewDigit
+                            (model.currentDigitIndex == decimalStartIdx + i)
+                            (decimalStartIdx + 1 + i)
+                            yPos
+                            d
+                    )
+                    (DigitalNumber.decimalDigitChars model.number)
     in
     div []
         [ text (String.fromInt (DigitalNumber.numberValue model.number))
@@ -165,5 +189,5 @@ view model =
             , svgTabindex 0
             , on "keydown" <| Json.Decode.map HandleKeyboardEvent decodeKeyboardEvent
             ]
-            (signChar :: absValueChars)
+            (signChar :: absValueChars ++ decimalDigitChars)
         ]
