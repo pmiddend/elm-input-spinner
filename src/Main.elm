@@ -1,15 +1,14 @@
 module Main exposing (..)
 
 import Browser
-import Char exposing (fromCode, toCode)
 import Color
+import DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
 import Html.Attributes exposing (type_)
 import Html.Events exposing (on)
 import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
-import List.Extra as ListExtra
 import TypedSvg exposing (circle, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)
@@ -21,116 +20,7 @@ import TypedSvg.Types exposing (Paint(..), px)
 
 
 main =
-    Browser.sandbox { init = init 0 12345 123, update = update, view = view }
-
-
-type DigitalNumber
-    = DigitalNumber Int Int (List Int)
-
-
-asciiCodeForZero =
-    48
-
-
-leftPadList : List a -> a -> Int -> List a
-leftPadList xs a len =
-    let
-        xsLen =
-            List.length xs
-
-        remainder =
-            len - xsLen
-    in
-    if remainder > 0 then
-        List.repeat remainder a ++ xs
-
-    else
-        xs
-
-
-makeDigitalNumber : Int -> Int -> Int -> DigitalNumber
-makeDigitalNumber minV maxV n =
-    let
-        nStr : String
-        nStr =
-            String.fromInt n
-
-        nListChar : List Char
-        nListChar =
-            String.toList nStr
-
-        numberOfDigits : Int
-        numberOfDigits =
-            String.length <| String.fromInt <| max (abs minV) (abs maxV)
-
-        -- Here, theoretically, stuff could break. If we
-        -- have a string that contains things other than
-        -- numbers, we have values outside 0, 1 here. So
-        -- we could return "Maybe (List Int)", but that is
-        -- so cumbersome and unnecesary since we know we have a positive integer in front of us
-        codeToNumber : Int -> Int
-        codeToNumber code =
-            code - asciiCodeForZero
-    in
-    DigitalNumber minV maxV (leftPadList (List.map (codeToNumber << toCode) nListChar) 0 numberOfDigits)
-
-
-digitalNumberValue : DigitalNumber -> Int
-digitalNumberValue (DigitalNumber _ _ digits) =
-    List.foldl (\newDigit oldNumber -> oldNumber * 10 + newDigit) 0 digits
-
-
-digitalNumberChangeDigit : (Int -> Int) -> DigitalNumber -> Int -> DigitalNumber
-digitalNumberChangeDigit f (DigitalNumber minV maxV digits) n =
-    let
-        newDigits =
-            ListExtra.updateAt n f digits
-
-        newValue =
-            digitalNumberValue (DigitalNumber minV maxV newDigits)
-    in
-    DigitalNumber minV maxV <|
-        if newValue < minV || newValue > maxV then
-            digits
-
-        else
-            newDigits
-
-
-digitalNumberIncreaseDigit : DigitalNumber -> Int -> DigitalNumber
-digitalNumberIncreaseDigit =
-    let
-        increaseDigit d =
-            if d < 9 then
-                d + 1
-
-            else
-                d
-    in
-    digitalNumberChangeDigit increaseDigit
-
-
-digitalNumberDecreaseDigit : DigitalNumber -> Int -> DigitalNumber
-digitalNumberDecreaseDigit =
-    let
-        decreaseDigit d =
-            if d > 0 then
-                d - 1
-
-            else
-                d
-    in
-    digitalNumberChangeDigit decreaseDigit
-
-
-digitalNumberNumberOfDigits : DigitalNumber -> Int
-digitalNumberNumberOfDigits (DigitalNumber minV maxV n) =
-    String.length <| String.fromInt <| max (abs minV) (abs maxV)
-
-
-digitalNumberToChars : DigitalNumber -> List Char
-digitalNumberToChars (DigitalNumber minValue maxValue digits) =
-    List.map (\x -> fromCode (x + asciiCodeForZero)) digits
+    Browser.sandbox { init = init -10000 12345 -123, update = update, view = view }
 
 
 
@@ -138,7 +28,7 @@ digitalNumberToChars (DigitalNumber minValue maxValue digits) =
 
 
 type alias Model =
-    { number : DigitalNumber
+    { number : DigitalNumber.DigitalNumber
     , currentDigitIndex : Int
     , hasFocus : Bool
     }
@@ -146,8 +36,8 @@ type alias Model =
 
 init : Int -> Int -> Int -> Model
 init minValue maxValue currentValue =
-    { number = makeDigitalNumber minValue maxValue currentValue
-    , currentDigitIndex = 0
+    { number = DigitalNumber.make minValue maxValue currentValue
+    , currentDigitIndex = 1
     , hasFocus = False
     }
 
@@ -162,10 +52,24 @@ update msg model =
         HandleKeyboardEvent { keyCode } ->
             case keyCode of
                 Key.Up ->
-                    { model | number = digitalNumberIncreaseDigit model.number model.currentDigitIndex }
+                    { model
+                        | number =
+                            if model.currentDigitIndex == 0 then
+                                DigitalNumber.increaseSign model.number
+
+                            else
+                                DigitalNumber.increaseDigit model.number (model.currentDigitIndex - 1)
+                    }
 
                 Key.Down ->
-                    { model | number = digitalNumberDecreaseDigit model.number model.currentDigitIndex }
+                    { model
+                        | number =
+                            if model.currentDigitIndex == 0 then
+                                DigitalNumber.decreaseSign model.number
+
+                            else
+                                DigitalNumber.decreaseDigit model.number (model.currentDigitIndex - 1)
+                    }
 
                 Key.Left ->
                     { model
@@ -180,7 +84,7 @@ update msg model =
                 Key.Right ->
                     { model
                         | currentDigitIndex =
-                            if model.currentDigitIndex < digitalNumberNumberOfDigits model.number - 1 then
+                            if model.currentDigitIndex < DigitalNumber.numberOfDigits model.number then
                                 model.currentDigitIndex + 1
 
                             else
@@ -228,35 +132,38 @@ view : Model -> Html Msg
 view model =
     let
         digitalNumberChars =
-            digitalNumberToChars model.number
+            DigitalNumber.toChars model.number
+
+        yPos =
+            30.0
+
+        absValueChars : List (Svg msg)
+        absValueChars =
+            List.indexedMap
+                (\i ->
+                    viewDigit
+                        (i + 1 == model.currentDigitIndex)
+                        -- + 1 because the zero'th position is the sign
+                        (toFloat ((i + 1) * digitFontSize))
+                        yPos
+                )
+                digitalNumberChars
+
+        signChar : Svg msg
+        signChar =
+            viewDigit (model.currentDigitIndex == 0) 0.0 yPos <|
+                if DigitalNumber.isNegative model.number then
+                    '-'
+
+                else
+                    '+'
     in
     div []
-        [ input [ type_ "text" ] []
+        [ text (String.fromInt (DigitalNumber.numberValue model.number))
         , svg
             [ viewBox 0 0 800 600
             , svgTabindex 0
             , on "keydown" <| Json.Decode.map HandleKeyboardEvent decodeKeyboardEvent
             ]
-            (List.indexedMap
-                (\i ->
-                    viewDigit
-                        (i == model.currentDigitIndex)
-                        (toFloat (i * digitFontSize))
-                        30.0
-                )
-                digitalNumberChars
-            )
-
-        -- , svg [ viewBox 0 0 800 600 ]
-        --     [ circle
-        --         [ cx (px 100)
-        --         , cy (px 100)
-        --         , r (px 30)
-        --         , fill <| Paint Color.blue
-        --         , strokeWidth (px 2)
-        --         , stroke <| Paint <| Color.rgba 0.8 0 0 0.5
-        --         , svgTabindex 0
-        --         ]
-        --         []
-        --     ]
+            (signChar :: absValueChars)
         ]
