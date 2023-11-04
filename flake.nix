@@ -31,6 +31,7 @@
               pkgs.elmPackages.elm-format
               pkgs.elmPackages.elm-language-server
               pkgs.elmPackages.elm-json
+              pkgs.elmPackages.elm-test
               elm-watch.packages.${system}.elm-watch
             ];
           };

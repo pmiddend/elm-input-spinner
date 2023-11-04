@@ -1,9 +1,12 @@
 module DigitalNumber exposing
-    ( DigitalNumber
+    ( DecimalType
+    , DigitalNumber
     , decimalDigitChars
+    , decimalIntegralPart
     , decreaseDecimalDigit
-    , decreaseDigit
+    , decreaseIntegerDigit
     , decreaseSign
+    , fastLog10
     , hasDecimals
     , hasSign
     , increaseDecimalDigit
@@ -21,32 +24,50 @@ module DigitalNumber exposing
     )
 
 import Char exposing (fromCode, toCode)
-import DecimalNumber
 import List.Extra as ListExtra
 import ListUtilities exposing (leftPadList)
+import Tuple
+
+
+type MyDecimals
+    = MyDecimals
+
+
+type alias DecimalType =
+    Decimal MyDecimals Int
 
 
 type DigitalNumber
     = DigitalNumber
-        { minValue : DecimalNumber.DecimalNumber
-        , maxValue : DecimalNumber.DecimalNumber
-        , value : DecimalNumber.DecimalNumber
+        { minValue : DecimalType
+        , maxValue : DecimalType
+        , value : DecimalType
         }
+
+
+decimalIntegralPart : DecimalType -> Int
+decimalIntegralPart =
+    Tuple.first << NumericDecimal.splitDecimal
+
+
+decimalPart : DecimalType -> Int
+decimalPart =
+    Tuple.second << NumericDecimal.splitDecimal
 
 
 hasSign : DigitalNumber -> Bool
 hasSign (DigitalNumber { minValue }) =
-    DecimalNumber.isNegative minValue
+    decimalIntegralPart minValue < 0
 
 
 hasDecimals : DigitalNumber -> Bool
 hasDecimals (DigitalNumber { value }) =
-    DecimalNumber.hasDecimals value
+    NumericDecimal.getPrecision value /= nat0
 
 
 isNegative : DigitalNumber -> Bool
 isNegative (DigitalNumber { value }) =
-    DecimalNumber.isNegative value
+    decimalIntegralPart value < 0
 
 
 asciiCodeForZero : Int
@@ -56,25 +77,17 @@ asciiCodeForZero =
 
 valueToString : DigitalNumber -> String
 valueToString (DigitalNumber { value }) =
-    DecimalNumber.toString value
+    NumericDecimal.toString value
 
 
 minValueToString : DigitalNumber -> String
 minValueToString (DigitalNumber { minValue }) =
-    DecimalNumber.toString minValue
+    NumericDecimal.toString minValue
 
 
 maxValueToString : DigitalNumber -> String
 maxValueToString (DigitalNumber { maxValue }) =
-    DecimalNumber.toString maxValue
-
-
-
--- Here, theoretically, stuff could break. If we
--- have a string that contains things other than
--- numbers, we have values outside 0, 1 here. So
--- we could return "Maybe (List Int)", but that is
--- so cumbersome and unnecesary since we know we have a positive integer in front of us
+    NumericDecimal.toString maxValue
 
 
 codeToNumber : Int -> Int
@@ -82,7 +95,7 @@ codeToNumber code =
     code - asciiCodeForZero
 
 
-make : DecimalNumber.DecimalNumber -> DecimalNumber.DecimalNumber -> DecimalNumber.DecimalNumber -> DigitalNumber
+make : DecimalType -> DecimalType -> DecimalType -> DigitalNumber
 make minV maxV v =
     DigitalNumber
         { minValue = minV
@@ -93,103 +106,90 @@ make minV maxV v =
 
 decimalDigitChars : DigitalNumber -> List Char
 decimalDigitChars (DigitalNumber { value }) =
-    List.map (\x -> fromCode (x + asciiCodeForZero)) (DecimalNumber.decimals value)
+    String.toList <| String.padLeft (toInt <| NumericDecimal.getPrecision value) '0' <| String.fromInt <| decimalPart value
 
 
 truncatedValue : DigitalNumber -> Int
 truncatedValue (DigitalNumber { value }) =
-    DecimalNumber.truncate value
+    decimalIntegralPart value
 
 
-digitalNumberChangeDecimalDigit : (Int -> Int) -> DigitalNumber -> Int -> DigitalNumber
-digitalNumberChangeDecimalDigit f (DigitalNumber d) n =
+modifyValue : DigitalNumber -> (DecimalType -> DecimalType) -> DigitalNumber
+modifyValue (DigitalNumber d) f =
     let
-        newDecimalDigits =
-            ListExtra.updateAt n f (DecimalNumber.decimals d.value)
-
-        newValue : DecimalNumber.DecimalNumber
+        newValue : DecimalType
         newValue =
-            DecimalNumber.replaceDecimals d.value newDecimalDigits
+            f d.value
     in
-    DigitalNumber
-        { d
-            | value =
-                if DecimalNumber.lt newValue d.minValue || DecimalNumber.gt newValue d.maxValue then
-                    d.value
+    DigitalNumber <|
+        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
+            d
 
-                else
-                    newValue
-        }
-
-
-digitalNumberChangeDigit : (Int -> Int) -> DigitalNumber -> Int -> DigitalNumber
-digitalNumberChangeDigit f (DigitalNumber d) n =
-    let
-        nStr : String
-        nStr =
-            String.fromInt (abs (DecimalNumber.truncate d.value))
-
-        nListChar : List Char
-        nListChar =
-            String.toList nStr
-
-        numberOfDigitsHelper : Int
-        numberOfDigitsHelper =
-            String.length <| String.fromInt <| max (DecimalNumber.truncate d.minValue) (DecimalNumber.truncate d.maxValue)
-
-        oldDigits =
-            leftPadList (List.map (codeToNumber << toCode) nListChar) 0 numberOfDigitsHelper
-
-        newDigits =
-            ListExtra.updateAt n f oldDigits
-
-        newValue : DecimalNumber.DecimalNumber
-        newValue =
-            DecimalNumber.replaceInteger d.value
-                ((if DecimalNumber.isNegative d.value then
-                    -1
-
-                  else
-                    1
-                 )
-                    * List.foldl (\newDigit oldNumber -> oldNumber * 10 + newDigit) 0 newDigits
-                )
-    in
-    DigitalNumber
-        { d
-            | value =
-                if DecimalNumber.lt newValue d.minValue || DecimalNumber.gt newValue d.maxValue then
-                    d.value
-
-                else
-                    newValue
-        }
-
-
-increaseDigitHelper d =
-    if d < 9 then
-        d + 1
-
-    else
-        d
+        else
+            { d | value = newValue }
 
 
 increaseIntegerDigit : DigitalNumber -> Int -> DigitalNumber
-increaseIntegerDigit =
-    digitalNumberChangeDigit increaseDigitHelper
+increaseIntegerDigit d whichDigit =
+    modifyValue d
+        (\value ->
+            NumericDecimal.add
+                value
+                (NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision value) (10 ^ whichDigit))
+        )
+
+
+decreaseIntegerDigit : DigitalNumber -> Int -> DigitalNumber
+decreaseIntegerDigit d whichDigit =
+    modifyValue d
+        (\value ->
+            NumericDecimal.subtract
+                value
+                (NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision value) (10 ^ whichDigit))
+        )
+
+
+
+-- FIXME
 
 
 increaseDecimalDigit : DigitalNumber -> Int -> DigitalNumber
-increaseDecimalDigit =
-    digitalNumberChangeDecimalDigit increaseDigitHelper
+increaseDecimalDigit d whichDigit =
+    modifyValue d
+        (\value ->
+            let
+                prec =
+                    NumericDecimal.getPrecision value
+            in
+            NumericDecimal.add
+                value
+                (NumericDecimal.succeed
+                    RoundDown
+                    prec
+                    (10 ^ (toInt prec - 1 - whichDigit))
+                )
+        )
 
 
 decreaseDecimalDigit : DigitalNumber -> Int -> DigitalNumber
-decreaseDecimalDigit =
-    digitalNumberChangeDecimalDigit decreaseDigitHelper
+decreaseDecimalDigit d whichDigit =
+    modifyValue d
+        (\value ->
+            let
+                prec =
+                    NumericDecimal.getPrecision value
+            in
+            NumericDecimal.subtract
+                value
+                (NumericDecimal.succeed
+                    RoundDown
+                    prec
+                    (10 ^ (toInt prec - 1 - whichDigit))
+                )
+        )
 
 
-decimalValue : DigitalNumber -> DecimalNumber.DecimalNumber
+decimalValue : DigitalNumber -> DecimalType
 decimalValue (DigitalNumber { value }) =
     value
 
@@ -197,57 +197,84 @@ decimalValue (DigitalNumber { value }) =
 increaseSign : DigitalNumber -> DigitalNumber
 increaseSign (DigitalNumber d) =
     let
-        newValue : DecimalNumber.DecimalNumber
-        newValue =
-            DecimalNumber.flipSign d.value
+        minusOne =
+            NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision d.value) -1
 
-        decimalCount =
-            DecimalNumber.decimalsCount d.value
+        newValue : DecimalType
+        newValue =
+            NumericDecimal.multiply
+                minusOne
+                d.value
     in
     DigitalNumber <|
-        if DecimalNumber.lt newValue d.minValue || DecimalNumber.gt newValue d.maxValue then
+        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
             d
 
         else
             { d | value = newValue }
+
+
+decimalLt x y =
+    Rational.lessThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
+
+
+decimalGt x y =
+    Rational.greaterThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
 
 
 decreaseSign : DigitalNumber -> DigitalNumber
 decreaseSign (DigitalNumber d) =
     let
-        newValue : DecimalNumber.DecimalNumber
+        minusOne =
+            NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision d.value) -1
+
+        newValue : DecimalType
         newValue =
-            DecimalNumber.flipSign d.value
+            NumericDecimal.multiply
+                minusOne
+                d.value
     in
     DigitalNumber <|
-        if DecimalNumber.lt newValue d.minValue || DecimalNumber.gt newValue d.maxValue then
+        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
             d
 
         else
             { d | value = newValue }
 
 
-decreaseDigitHelper d =
-    if d > 0 then
-        d - 1
 
-    else
-        d
+-- decreaseDigitHelper d =
+--     if d > 0 then
+--         d - 1
+--     else
+--         d
 
 
 decreaseDigit : DigitalNumber -> Int -> DigitalNumber
-decreaseDigit =
-    digitalNumberChangeDigit decreaseDigitHelper
+decreaseDigit (DigitalNumber d) n =
+    DigitalNumber d
 
 
 numberOfIntegerDigits : DigitalNumber -> Int
 numberOfIntegerDigits (DigitalNumber { minValue, maxValue }) =
-    String.length <| String.fromInt <| max (abs (DecimalNumber.truncate minValue)) (abs (DecimalNumber.truncate maxValue))
+    fastLog10 <| max (abs (decimalIntegralPart minValue)) (abs (decimalIntegralPart maxValue))
+
+
+fastLog10 : Int -> Int
+fastLog10 x =
+    if x < 0 then
+        fastLog10 -x
+
+    else if x < 10 then
+        1
+
+    else
+        1 + fastLog10 (x // 10)
 
 
 numberOfDecimalDigits : DigitalNumber -> Int
 numberOfDecimalDigits (DigitalNumber { value }) =
-    List.length (DecimalNumber.decimals value)
+    fastLog10 <| decimalPart <| value
 
 
 integerChars : DigitalNumber -> List Char
@@ -255,6 +282,6 @@ integerChars (DigitalNumber { minValue, maxValue, value }) =
     let
         numberOfDigitsHelper : Int
         numberOfDigitsHelper =
-            String.length <| String.fromInt <| max (DecimalNumber.truncate minValue) (DecimalNumber.truncate maxValue)
+            fastLog10 <| max (decimalIntegralPart minValue) (decimalIntegralPart maxValue)
     in
-    leftPadList (String.toList <| String.fromInt <| abs <| DecimalNumber.truncate <| value) '0' numberOfDigitsHelper
+    leftPadList (String.toList <| String.fromInt <| abs <| decimalIntegralPart <| value) '0' numberOfDigitsHelper

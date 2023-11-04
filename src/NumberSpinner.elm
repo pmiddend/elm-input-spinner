@@ -1,7 +1,6 @@
 module NumberSpinner exposing (Model, Msg, init, update, view)
 
 import Color
-import DecimalNumber
 import DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
 import Html.Attributes exposing (type_)
@@ -9,6 +8,8 @@ import Html.Events exposing (preventDefaultOn, stopPropagationOn)
 import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, considerKeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
+import Numeric.Decimal as NumericDecimal exposing (Decimal)
+import Numeric.Nat as Nat
 import Set
 import TypedSvg exposing (circle, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
@@ -66,19 +67,18 @@ type alias Model =
     }
 
 
-init : DecimalNumber.DecimalNumber -> DecimalNumber.DecimalNumber -> DecimalNumber.DecimalNumber -> Model
+init : DigitalNumber.DecimalType -> DigitalNumber.DecimalType -> DigitalNumber.DecimalType -> Model
 init minValue maxValue currentValue =
     { number = DigitalNumber.make minValue maxValue currentValue
     , cursorPosition =
         OnInteger
-            { boundsDecimals = List.length (DecimalNumber.decimals currentValue)
+            { boundsDecimals = Nat.toInt <| NumericDecimal.getPrecision currentValue
             , boundsIntegers =
-                String.length <|
-                    String.fromInt <|
-                        max
-                            (abs (DecimalNumber.truncate minValue))
-                            (abs (DecimalNumber.truncate maxValue))
-            , hasSign = DecimalNumber.isNegative minValue
+                DigitalNumber.fastLog10 <|
+                    max
+                        (abs (DigitalNumber.decimalIntegralPart minValue))
+                        (abs (DigitalNumber.decimalIntegralPart maxValue))
+            , hasSign = DigitalNumber.decimalIntegralPart minValue < 0
             }
             0
     , hasFocus = False
@@ -159,7 +159,7 @@ update msg model =
                                     DigitalNumber.increaseSign model.number
 
                                 OnInteger _ i ->
-                                    DigitalNumber.increaseIntegerDigit model.number i
+                                    DigitalNumber.increaseIntegerDigit model.number (Debug.log "which digit" i)
 
                                 OnDecimal _ i ->
                                     DigitalNumber.increaseDecimalDigit model.number i
@@ -173,7 +173,7 @@ update msg model =
                                     DigitalNumber.decreaseSign model.number
 
                                 OnInteger _ i ->
-                                    DigitalNumber.decreaseDigit model.number i
+                                    DigitalNumber.decreaseIntegerDigit model.number i
 
                                 OnDecimal _ i ->
                                     DigitalNumber.decreaseDecimalDigit model.number i
@@ -293,7 +293,15 @@ view model =
                 []
     in
     div []
-        [ text ("Current: " ++ DigitalNumber.valueToString model.number ++ ", " ++ "Min: " ++ DigitalNumber.minValueToString model.number ++ ", Max: " ++ DigitalNumber.maxValueToString model.number)
+        [ text
+            ("Current: "
+                ++ DigitalNumber.valueToString model.number
+                ++ ", "
+                ++ "Min: "
+                ++ DigitalNumber.minValueToString model.number
+                ++ ", Max: "
+                ++ DigitalNumber.maxValueToString model.number
+            )
         , svg
             [ viewBox 0 0 400 300
             , svgTabindex 0
