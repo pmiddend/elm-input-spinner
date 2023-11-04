@@ -12,9 +12,12 @@ module DigitalNumber exposing
     , integerChars
     , isNegative
     , make
+    , maxValueToString
+    , minValueToString
     , numberOfDecimalDigits
     , numberOfIntegerDigits
     , truncatedValue
+    , valueToString
     )
 
 import Char exposing (fromCode, toCode)
@@ -49,6 +52,21 @@ isNegative (DigitalNumber { value }) =
 asciiCodeForZero : Int
 asciiCodeForZero =
     48
+
+
+valueToString : DigitalNumber -> String
+valueToString (DigitalNumber { value }) =
+    DecimalNumber.toString value
+
+
+minValueToString : DigitalNumber -> String
+minValueToString (DigitalNumber { minValue }) =
+    DecimalNumber.toString minValue
+
+
+maxValueToString : DigitalNumber -> String
+maxValueToString (DigitalNumber { maxValue }) =
+    DecimalNumber.toString maxValue
 
 
 

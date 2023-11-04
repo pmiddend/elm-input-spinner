@@ -293,7 +293,7 @@ view model =
                 []
     in
     div []
-        [ text (String.fromInt (DigitalNumber.truncatedValue model.number))
+        [ text ("Current: " ++ DigitalNumber.valueToString model.number ++ ", " ++ "Min: " ++ DigitalNumber.minValueToString model.number ++ ", Max: " ++ DigitalNumber.maxValueToString model.number)
         , svg
             [ viewBox 0 0 400 300
             , svgTabindex 0

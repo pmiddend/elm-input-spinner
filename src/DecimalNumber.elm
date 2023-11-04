@@ -12,12 +12,14 @@ module DecimalNumber exposing
     , make
     , replaceDecimals
     , replaceInteger
+    , toString
     , truncate
     )
 
 import List
 import List.Extra as ListExtra
 import ListUtilities exposing (rightPadList)
+import String
 
 
 
@@ -56,6 +58,17 @@ fromInt x =
     DecimalNumber
         x
         []
+
+
+toString : DecimalNumber -> String
+toString (DecimalNumber n d) =
+    String.fromInt n
+        ++ (if List.isEmpty d then
+                ""
+
+            else
+                "." ++ String.join "" (List.map String.fromInt d)
+           )
 
 
 hasDecimals : DecimalNumber -> Bool
