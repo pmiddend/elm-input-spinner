@@ -5,7 +5,7 @@ import Color
 import DecimalNumber as Decimal
 import DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
-import Html.Attributes exposing (type_)
+import Html.Attributes exposing (style, type_)
 import Html.Events exposing (on)
 import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, decodeKeyboardEvent)
@@ -83,4 +83,4 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
-    div [] (List.indexedMap (\i spinner -> Html.map (NumberSpinnerMsg i) <| NumberSpinner.view spinner) model.spinners)
+    div [ style "width" "50%" ] (List.indexedMap (\i spinner -> Html.map (NumberSpinnerMsg i) <| NumberSpinner.view spinner) model.spinners)

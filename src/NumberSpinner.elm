@@ -10,10 +10,18 @@ import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, considerKeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
 import Set
-import TypedSvg exposing (circle, svg, text_)
-import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
+import TypedSvg exposing (circle, g, line, rect, svg, text_)
+import TypedSvg.Attributes exposing (cx, cy, dominantBaseline, fill, fontFamily, fontSize, height, r, stroke, strokeWidth, style, textAnchor, transform, viewBox, width, x, x1, x2, y, y1, y2)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)
-import TypedSvg.Types exposing (Paint(..), px)
+import TypedSvg.Events as SvgEvents
+import TypedSvg.Types
+    exposing
+        ( AnchorAlignment(..)
+        , DominantBaseline(..)
+        , Paint(..)
+        , Transform(..)
+        , px
+        )
 
 
 type alias SpinnerBounds =
@@ -86,6 +94,11 @@ init decimalPlaces minValue maxValue currentValue =
 
 type Msg
     = HandleKeyboardEvent KeyboardEvent
+    | IncreaseIntegerDigit Int
+    | IncreaseDecimalDigit Int
+    | FlipSign
+    | DecreaseIntegerDigit Int
+    | DecreaseDecimalDigit Int
 
 
 moveCursorLeft : CursorPosition -> CursorPosition
@@ -148,6 +161,21 @@ nonPropagatedKeys =
 update : Msg -> Model -> Model
 update msg model =
     case msg of
+        IncreaseIntegerDigit i ->
+            { model | number = DigitalNumber.increaseIntegerDigit model.number i }
+
+        IncreaseDecimalDigit i ->
+            { model | number = DigitalNumber.increaseDecimalDigit model.number i }
+
+        DecreaseIntegerDigit i ->
+            { model | number = DigitalNumber.decreaseIntegerDigit model.number i }
+
+        DecreaseDecimalDigit i ->
+            { model | number = DigitalNumber.decreaseDecimalDigit model.number i }
+
+        FlipSign ->
+            { model | number = DigitalNumber.increaseSign model.number }
+
         HandleKeyboardEvent { keyCode } ->
             case keyCode of
                 Key.Up ->
@@ -204,21 +232,34 @@ digitFontSize =
 
 viewDigit : Bool -> Int -> Float -> Char -> Svg msg
 viewDigit selected xV yV d =
-    text_
-        [ x (px (toFloat <| xV * digitFontSize))
-        , y (px yV)
-        , fontSize (px (toFloat digitFontSize))
-        , fontFamily [ "sans-serif" ]
-        , fill <|
-            Paint
-                (if selected then
-                    Color.red
+    g []
+        [ rect
+            [ fill PaintNone
+            , stroke PaintNone
+            , x (px (toFloat <| xV * digitFontSize))
+            , y (px -2)
+            , width (px (toFloat digitFontSize))
+            , height (px (toFloat digitFontSize))
+            ]
+            []
+        , text_
+            [ x (px ((toFloat xV + 0.5) * toFloat digitFontSize))
+            , y (px (toFloat digitFontSize * 0.5))
+            , textAnchor AnchorMiddle
+            , dominantBaseline DominantBaselineMiddle
+            , fontSize (px (toFloat digitFontSize))
+            , fontFamily [ "monospace" ]
+            , fill <|
+                Paint
+                    (if selected then
+                        Color.red
 
-                 else
-                    Color.blue
-                )
+                     else
+                        Color.blue
+                    )
+            ]
+            [ SvgCore.text (String.fromChar d) ]
         ]
-        [ SvgCore.text (String.fromChar d) ]
 
 
 view : Model -> Html Msg
@@ -290,6 +331,187 @@ view model =
 
             else
                 []
+
+        textualInformation =
+            g [ transform [ Translate 0 (toFloat digitFontSize) ] ] (signChar ++ absValueChars ++ decimalDigitChars)
+
+        arrowUp : Msg -> Svg Msg
+        arrowUp msg =
+            let
+                ccx =
+                    toFloat digitFontSize / 2.0
+
+                ccy =
+                    toFloat digitFontSize / 2.0
+
+                cr =
+                    toFloat digitFontSize / 3.0
+
+                lineLength =
+                    0.6
+
+                wingLength =
+                    cr * 0.4
+            in
+            g [ SvgEvents.onClick msg, style "cursor: pointer" ]
+                [ circle
+                    [ cx (px ccx)
+                    , cy (px ccy)
+                    , r (px cr)
+                    , fill (Paint Color.white)
+                    , stroke (Paint Color.grey)
+                    ]
+                    []
+
+                -- vertical line
+                , line
+                    [ x1 (px ccx)
+                    , x2 (px ccx)
+                    , y1 (px (ccy + cr * lineLength))
+                    , y2 (px (ccy - cr * lineLength))
+                    , stroke (Paint Color.blue)
+                    ]
+                    []
+
+                -- left arrow wing
+                , line
+                    [ x1 (px ccx)
+                    , x2 (px (ccx - wingLength))
+                    , y1 (px (ccy - cr * lineLength))
+                    , y2 (px (ccy - cr * lineLength + wingLength))
+                    , stroke (Paint Color.blue)
+                    ]
+                    []
+
+                -- right arrow wing
+                , line
+                    [ x1 (px ccx)
+                    , x2 (px (ccx + wingLength))
+                    , y1 (px (ccy - cr * lineLength))
+                    , y2 (px (ccy - cr * lineLength + wingLength))
+                    , stroke (Paint Color.blue)
+                    ]
+                    []
+                ]
+
+        arrowDown msg =
+            g [ transform [ Rotate 180 (toFloat digitFontSize / 2.0) (toFloat digitFontSize / 2.0) ] ] [ arrowUp msg ]
+
+        arrowsTop : List (Svg Msg)
+        arrowsTop =
+            let
+                integers =
+                    DigitalNumber.numberOfIntegerDigits model.number
+
+                hasSign =
+                    DigitalNumber.hasSign model.number
+            in
+            (if hasSign then
+                [ arrowUp FlipSign ]
+
+             else
+                []
+            )
+                ++ (List.map
+                        (\i ->
+                            g
+                                [ transform
+                                    [ Translate
+                                        (toFloat
+                                            (if hasSign then
+                                                i
+
+                                             else
+                                                i - 1
+                                            )
+                                            * toFloat digitFontSize
+                                        )
+                                        0
+                                    ]
+                                ]
+                                [ arrowUp (IncreaseIntegerDigit (i - 1)) ]
+                        )
+                        (List.range 1 integers)
+                        ++ List.map
+                            (\i ->
+                                g
+                                    [ transform
+                                        [ Translate
+                                            (toFloat
+                                                (if hasSign then
+                                                    integers + i + 1
+
+                                                 else
+                                                    integers + i
+                                                )
+                                                * toFloat digitFontSize
+                                            )
+                                            0
+                                        ]
+                                    ]
+                                    [ arrowUp (IncreaseDecimalDigit (i - 1)) ]
+                            )
+                            (List.range 1 (DigitalNumber.numberOfDecimalDigits model.number))
+                   )
+
+        arrowsBottom =
+            let
+                integers =
+                    DigitalNumber.numberOfIntegerDigits model.number
+
+                hasSign =
+                    DigitalNumber.hasSign model.number
+            in
+            [ g [ transform [ Translate 0 (2.0 * toFloat digitFontSize - 4) ] ]
+                ((if hasSign then
+                    [ arrowDown FlipSign ]
+
+                  else
+                    []
+                 )
+                    ++ (List.map
+                            (\i ->
+                                g
+                                    [ transform
+                                        [ Translate
+                                            (toFloat
+                                                (if hasSign then
+                                                    i
+
+                                                 else
+                                                    i - 1
+                                                )
+                                                * toFloat digitFontSize
+                                            )
+                                            0
+                                        ]
+                                    ]
+                                    [ arrowDown (DecreaseIntegerDigit (i - 1)) ]
+                            )
+                            (List.range 1 integers)
+                            ++ List.map
+                                (\i ->
+                                    g
+                                        [ transform
+                                            [ Translate
+                                                (toFloat
+                                                    (if hasSign then
+                                                        integers + i + 1
+
+                                                     else
+                                                        integers + i
+                                                    )
+                                                    * toFloat digitFontSize
+                                                )
+                                                0
+                                            ]
+                                        ]
+                                        [ arrowDown (DecreaseDecimalDigit (i - 1)) ]
+                                )
+                                (List.range 1 (DigitalNumber.numberOfDecimalDigits model.number))
+                       )
+                )
+            ]
     in
     div []
         [ text
@@ -316,5 +538,5 @@ view model =
                         )
                     )
             ]
-            (signChar ++ absValueChars ++ decimalDigitChars)
+            (textualInformation :: (arrowsTop ++ arrowsBottom))
         ]
