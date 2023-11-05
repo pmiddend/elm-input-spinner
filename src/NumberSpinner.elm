@@ -1,6 +1,7 @@
-module NumberSpinner exposing (Model, Msg, init, update, view)
+module NumberSpinner exposing (CursorPosition(..), Model, Msg, SpinnerBounds, init, moveCursorLeft, moveCursorRight, update, view)
 
 import Color
+import DecimalNumber as Decimal
 import DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
 import Html.Attributes exposing (type_)
@@ -8,8 +9,6 @@ import Html.Events exposing (preventDefaultOn, stopPropagationOn)
 import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, considerKeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
-import Numeric.Decimal as NumericDecimal exposing (Decimal)
-import Numeric.Nat as Nat
 import Set
 import TypedSvg exposing (circle, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
@@ -67,18 +66,18 @@ type alias Model =
     }
 
 
-init : DigitalNumber.DecimalType -> DigitalNumber.DecimalType -> DigitalNumber.DecimalType -> Model
-init minValue maxValue currentValue =
-    { number = DigitalNumber.make minValue maxValue currentValue
+init : Int -> Decimal.DecimalNumber -> Decimal.DecimalNumber -> Decimal.DecimalNumber -> Model
+init decimalPlaces minValue maxValue currentValue =
+    let
+        number =
+            DigitalNumber.make decimalPlaces minValue maxValue currentValue
+    in
+    { number = number
     , cursorPosition =
         OnInteger
-            { boundsDecimals = Nat.toInt <| NumericDecimal.getPrecision currentValue
-            , boundsIntegers =
-                DigitalNumber.fastLog10 <|
-                    max
-                        (abs (DigitalNumber.decimalIntegralPart minValue))
-                        (abs (DigitalNumber.decimalIntegralPart maxValue))
-            , hasSign = DigitalNumber.decimalIntegralPart minValue < 0
+            { boundsDecimals = decimalPlaces
+            , boundsIntegers = DigitalNumber.numberOfIntegerDigits number
+            , hasSign = DigitalNumber.hasSign number
             }
             0
     , hasFocus = False
@@ -159,7 +158,7 @@ update msg model =
                                     DigitalNumber.increaseSign model.number
 
                                 OnInteger _ i ->
-                                    DigitalNumber.increaseIntegerDigit model.number (Debug.log "which digit" i)
+                                    DigitalNumber.increaseIntegerDigit model.number i
 
                                 OnDecimal _ i ->
                                     DigitalNumber.increaseDecimalDigit model.number i
@@ -287,7 +286,7 @@ view model =
                                 yPos
                                 d
                         )
-                        (DigitalNumber.decimalDigitChars model.number)
+                        (DigitalNumber.decimalChars model.number)
 
             else
                 []

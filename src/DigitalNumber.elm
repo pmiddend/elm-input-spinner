@@ -1,12 +1,11 @@
 module DigitalNumber exposing
     ( DecimalType
     , DigitalNumber
-    , decimalDigitChars
-    , decimalIntegralPart
+    , decimalChars
+    , decimalValue
     , decreaseDecimalDigit
     , decreaseIntegerDigit
     , decreaseSign
-    , fastLog10
     , hasDecimals
     , hasSign
     , increaseDecimalDigit
@@ -23,18 +22,13 @@ module DigitalNumber exposing
     , valueToString
     )
 
-import Char exposing (fromCode, toCode)
-import List.Extra as ListExtra
-import ListUtilities exposing (leftPadList)
-import Tuple
-
-
-type MyDecimals
-    = MyDecimals
+import DecimalNumber as DN
+import List
+import ListUtilities exposing (leftPadList, rightPadList)
 
 
 type alias DecimalType =
-    Decimal MyDecimals Int
+    DN.DecimalNumber
 
 
 type DigitalNumber
@@ -42,76 +36,53 @@ type DigitalNumber
         { minValue : DecimalType
         , maxValue : DecimalType
         , value : DecimalType
+        , decimalPlaces : Int
         }
-
-
-decimalIntegralPart : DecimalType -> Int
-decimalIntegralPart =
-    Tuple.first << NumericDecimal.splitDecimal
-
-
-decimalPart : DecimalType -> Int
-decimalPart =
-    Tuple.second << NumericDecimal.splitDecimal
 
 
 hasSign : DigitalNumber -> Bool
 hasSign (DigitalNumber { minValue }) =
-    decimalIntegralPart minValue < 0
+    DN.integralPart minValue < 0
 
 
 hasDecimals : DigitalNumber -> Bool
-hasDecimals (DigitalNumber { value }) =
-    NumericDecimal.getPrecision value /= nat0
+hasDecimals (DigitalNumber { decimalPlaces }) =
+    decimalPlaces > 0
 
 
 isNegative : DigitalNumber -> Bool
 isNegative (DigitalNumber { value }) =
-    decimalIntegralPart value < 0
-
-
-asciiCodeForZero : Int
-asciiCodeForZero =
-    48
+    DN.integralPart value < 0
 
 
 valueToString : DigitalNumber -> String
 valueToString (DigitalNumber { value }) =
-    NumericDecimal.toString value
+    DN.toString value
 
 
 minValueToString : DigitalNumber -> String
 minValueToString (DigitalNumber { minValue }) =
-    NumericDecimal.toString minValue
+    DN.toString minValue
 
 
 maxValueToString : DigitalNumber -> String
 maxValueToString (DigitalNumber { maxValue }) =
-    NumericDecimal.toString maxValue
+    DN.toString maxValue
 
 
-codeToNumber : Int -> Int
-codeToNumber code =
-    code - asciiCodeForZero
-
-
-make : DecimalType -> DecimalType -> DecimalType -> DigitalNumber
-make minV maxV v =
+make : Int -> DecimalType -> DecimalType -> DecimalType -> DigitalNumber
+make decimalPlaces minV maxV v =
     DigitalNumber
         { minValue = minV
         , maxValue = maxV
         , value = v
+        , decimalPlaces = decimalPlaces
         }
-
-
-decimalDigitChars : DigitalNumber -> List Char
-decimalDigitChars (DigitalNumber { value }) =
-    String.toList <| String.padLeft (toInt <| NumericDecimal.getPrecision value) '0' <| String.fromInt <| decimalPart value
 
 
 truncatedValue : DigitalNumber -> Int
 truncatedValue (DigitalNumber { value }) =
-    decimalIntegralPart value
+    DN.integralPart value
 
 
 modifyValue : DigitalNumber -> (DecimalType -> DecimalType) -> DigitalNumber
@@ -122,7 +93,7 @@ modifyValue (DigitalNumber d) f =
             f d.value
     in
     DigitalNumber <|
-        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
+        if DN.lt newValue d.minValue || DN.gt newValue d.maxValue then
             d
 
         else
@@ -133,41 +104,24 @@ increaseIntegerDigit : DigitalNumber -> Int -> DigitalNumber
 increaseIntegerDigit d whichDigit =
     modifyValue d
         (\value ->
-            NumericDecimal.add
+            DN.add
                 value
-                (NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision value) (10 ^ whichDigit))
+                (DN.tenToThePower (numberOfIntegerDigits d - whichDigit - 1))
         )
 
 
 decreaseIntegerDigit : DigitalNumber -> Int -> DigitalNumber
 decreaseIntegerDigit d whichDigit =
-    modifyValue d
-        (\value ->
-            NumericDecimal.subtract
-                value
-                (NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision value) (10 ^ whichDigit))
-        )
-
-
-
--- FIXME
+    modifyValue d (\value -> DN.subtract value (DN.tenToThePower (numberOfIntegerDigits d - whichDigit - 1)))
 
 
 increaseDecimalDigit : DigitalNumber -> Int -> DigitalNumber
 increaseDecimalDigit d whichDigit =
     modifyValue d
         (\value ->
-            let
-                prec =
-                    NumericDecimal.getPrecision value
-            in
-            NumericDecimal.add
+            DN.add
                 value
-                (NumericDecimal.succeed
-                    RoundDown
-                    prec
-                    (10 ^ (toInt prec - 1 - whichDigit))
-                )
+                (DN.tenToThePowerMinus (whichDigit + 1))
         )
 
 
@@ -175,17 +129,9 @@ decreaseDecimalDigit : DigitalNumber -> Int -> DigitalNumber
 decreaseDecimalDigit d whichDigit =
     modifyValue d
         (\value ->
-            let
-                prec =
-                    NumericDecimal.getPrecision value
-            in
-            NumericDecimal.subtract
+            DN.subtract
                 value
-                (NumericDecimal.succeed
-                    RoundDown
-                    prec
-                    (10 ^ (toInt prec - 1 - whichDigit))
-                )
+                (DN.tenToThePowerMinus (whichDigit + 1))
         )
 
 
@@ -195,69 +141,18 @@ decimalValue (DigitalNumber { value }) =
 
 
 increaseSign : DigitalNumber -> DigitalNumber
-increaseSign (DigitalNumber d) =
-    let
-        minusOne =
-            NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision d.value) -1
-
-        newValue : DecimalType
-        newValue =
-            NumericDecimal.multiply
-                minusOne
-                d.value
-    in
-    DigitalNumber <|
-        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
-            d
-
-        else
-            { d | value = newValue }
-
-
-decimalLt x y =
-    Rational.lessThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
-
-
-decimalGt x y =
-    Rational.greaterThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
+increaseSign d =
+    modifyValue d (\value -> DN.mul value (DN.fromInt -1))
 
 
 decreaseSign : DigitalNumber -> DigitalNumber
-decreaseSign (DigitalNumber d) =
-    let
-        minusOne =
-            NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision d.value) -1
-
-        newValue : DecimalType
-        newValue =
-            NumericDecimal.multiply
-                minusOne
-                d.value
-    in
-    DigitalNumber <|
-        if decimalLt newValue d.minValue || decimalGt newValue d.maxValue then
-            d
-
-        else
-            { d | value = newValue }
-
-
-
--- decreaseDigitHelper d =
---     if d > 0 then
---         d - 1
---     else
---         d
-
-
-decreaseDigit : DigitalNumber -> Int -> DigitalNumber
-decreaseDigit (DigitalNumber d) n =
-    DigitalNumber d
+decreaseSign =
+    increaseSign
 
 
 numberOfIntegerDigits : DigitalNumber -> Int
 numberOfIntegerDigits (DigitalNumber { minValue, maxValue }) =
-    fastLog10 <| max (abs (decimalIntegralPart minValue)) (abs (decimalIntegralPart maxValue))
+    fastLog10 <| max (abs (DN.integralPart minValue)) (abs (DN.integralPart maxValue))
 
 
 fastLog10 : Int -> Int
@@ -274,7 +169,7 @@ fastLog10 x =
 
 numberOfDecimalDigits : DigitalNumber -> Int
 numberOfDecimalDigits (DigitalNumber { value }) =
-    fastLog10 <| decimalPart <| value
+    List.length <| DN.decimalDigits <| value
 
 
 integerChars : DigitalNumber -> List Char
@@ -282,6 +177,11 @@ integerChars (DigitalNumber { minValue, maxValue, value }) =
     let
         numberOfDigitsHelper : Int
         numberOfDigitsHelper =
-            fastLog10 <| max (decimalIntegralPart minValue) (decimalIntegralPart maxValue)
+            fastLog10 <| max (DN.integralPart minValue) (DN.integralPart maxValue)
     in
-    leftPadList (String.toList <| String.fromInt <| abs <| decimalIntegralPart <| value) '0' numberOfDigitsHelper
+    leftPadList (String.toList <| String.fromInt <| abs <| DN.integralPart <| value) '0' numberOfDigitsHelper
+
+
+decimalChars : DigitalNumber -> List Char
+decimalChars (DigitalNumber { decimalPlaces, value }) =
+    rightPadList (List.take decimalPlaces (DN.decimalDigits value)) '0' decimalPlaces

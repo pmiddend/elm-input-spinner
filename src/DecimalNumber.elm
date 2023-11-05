@@ -1,81 +1,109 @@
-module DecimalNumber exposing (DecimalNumber, fromInt, fromIntegralAndDecimals, integralPart, toString)
+module DecimalNumber exposing
+    ( DecimalNumber
+    , add
+    , decimalDigits
+    , flipSign
+    , fromInt
+    , fromIntegralAndDecimals
+    , gt
+    , integralPart
+    , lt
+    , mul
+    , subtract
+    , tenToThePower
+    , tenToThePowerMinus
+    , toString
+    )
 
-import List exposing (foldl)
-import Numeric.Decimal as NumericDecimal exposing (Decimal)
-import Numeric.Decimal.Rounding exposing (RoundingAlgorythm(..))
-import Numeric.Nat exposing (fromIntAbs, toInt)
-import Numeric.Rational as Rational
-
-
-type MyDecimals
-    = MyDecimals
+import Char exposing (fromCode)
+import Decimal
+import List
+import String.Extra as StringExtra
 
 
 type alias DecimalNumber =
-    Decimal MyDecimals Int
-
-
-type alias Precision =
-    Int
+    Decimal.Decimal
 
 
 integralPart : DecimalNumber -> Int
 integralPart =
-    Tuple.first << NumericDecimal.splitDecimal
+    Maybe.withDefault -1337 << Maybe.andThen String.toInt << List.head << String.split "." << Decimal.toString
 
 
-decimalPart : DecimalNumber -> Int
-decimalPart =
-    Tuple.second << NumericDecimal.splitDecimal
-
-
-getPrecision : DecimalNumber -> Precision
-getPrecision =
-    toInt << NumericDecimal.getPrecision
+decimalDigits : DecimalNumber -> List Char
+decimalDigits =
+    String.toList << StringExtra.rightOf "." << Decimal.toString
 
 
 toString : DecimalNumber -> String
 toString =
-    NumericDecimal.toString
+    Decimal.toString
 
 
 lt : DecimalNumber -> DecimalNumber -> Bool
-lt x y =
-    Rational.lessThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
+lt =
+    Decimal.lt
 
 
 gt : DecimalNumber -> DecimalNumber -> Bool
-gt x y =
-    Rational.greaterThan (NumericDecimal.toRational x) (NumericDecimal.toRational y)
+gt =
+    Decimal.gt
 
 
-fromInt : Precision -> Int -> DecimalNumber
-fromInt precision number =
-    NumericDecimal.fromInt RoundDown (fromIntAbs precision) number
+add : DecimalNumber -> DecimalNumber -> DecimalNumber
+add =
+    Decimal.add
 
 
-fromIntegralAndDecimals : Precision -> Int -> List Int -> DecimalNumber
-fromIntegralAndDecimals precision integral decimals =
-    NumericDecimal.succeed
-        RoundDown
-        (fromIntAbs precision)
-        (integral * 10 ^ precision + foldl (\new old -> old * 10 + new) 0 decimals)
+subtract : DecimalNumber -> DecimalNumber -> DecimalNumber
+subtract =
+    Decimal.sub
 
 
-tenToThePowerMinus : Precision -> Int -> DecimalNumber
-tenToThePowerMinus precision whichDigit =
-    NumericDecimal.succeed
-        RoundDown
-        (fromIntAbs precision)
-        (10 ^ (precision - 1 - whichDigit))
+mul : DecimalNumber -> DecimalNumber -> DecimalNumber
+mul =
+    Decimal.mul
+
+
+fromInt : Int -> DecimalNumber
+fromInt =
+    Decimal.fromInt
+
+
+asciiCodeForZero : Int
+asciiCodeForZero =
+    48
+
+
+fromIntegralAndDecimals : Int -> List Int -> DecimalNumber
+fromIntegralAndDecimals integral decimals =
+    Maybe.withDefault (Decimal.fromInt 0) <|
+        Decimal.fromString <|
+            if List.isEmpty decimals then
+                String.fromInt integral
+
+            else
+                String.fromInt integral
+                    ++ "."
+                    ++ String.fromList (List.map (\d -> fromCode (d + asciiCodeForZero)) decimals)
+
+
+tenToThePowerMinus : Int -> DecimalNumber
+tenToThePowerMinus whichDigit =
+    Decimal.fromIntWithExponent 1 -whichDigit
+
+
+tenToThePower : Int -> DecimalNumber
+tenToThePower whichDigit =
+    Decimal.fromIntWithExponent 1 whichDigit
 
 
 flipSign : DecimalNumber -> DecimalNumber
 flipSign value =
     let
         minusOne =
-            NumericDecimal.fromInt RoundDown (NumericDecimal.getPrecision value) -1
+            Decimal.fromInt -1
     in
-    NumericDecimal.multiply
+    Decimal.mul
         minusOne
         value

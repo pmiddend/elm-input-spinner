@@ -2,7 +2,7 @@ module Main exposing (..)
 
 import Browser
 import Color
-import DecimalNumber
+import DecimalNumber as Decimal
 import DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
 import Html.Attributes exposing (type_)
@@ -12,9 +12,6 @@ import Keyboard.Event exposing (KeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
 import List.Extra as ListExtra
 import NumberSpinner
-import Numeric.Decimal as NumericDecimal exposing (Decimal)
-import Numeric.Decimal.Rounding exposing (RoundingAlgorythm(..))
-import Numeric.Nat exposing (nat2)
 import TypedSvg exposing (circle, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)
@@ -32,27 +29,31 @@ main =
             { spinners =
                 [ -- Sign and decimal places
                   NumberSpinner.init
-                    (NumericDecimal.fromInt RoundDown nat2 -100)
-                    (NumericDecimal.fromInt RoundDown nat2 12345)
-                    (NumericDecimal.succeed RoundDown nat2 12345)
+                    2
+                    (Decimal.fromInt -100)
+                    (Decimal.fromInt 12345)
+                    (Decimal.fromIntegralAndDecimals 123 [ 4, 5 ])
 
                 -- No sign, decimal places
                 , NumberSpinner.init
-                    (NumericDecimal.succeed RoundDown nat2 45)
-                    (NumericDecimal.fromInt RoundDown nat2 12345)
-                    (NumericDecimal.fromInt RoundDown nat2 123)
+                    2
+                    (Decimal.fromInt 45)
+                    (Decimal.fromInt 12345)
+                    (Decimal.fromIntegralAndDecimals 123 [ 4, 5 ])
 
                 -- Sign, no decimal places
                 , NumberSpinner.init
-                    (NumericDecimal.fromInt RoundDown nat2 -100)
-                    (NumericDecimal.fromInt RoundDown nat2 12345)
-                    (NumericDecimal.fromInt RoundDown nat2 123)
+                    0
+                    (Decimal.fromInt -100)
+                    (Decimal.fromInt 12345)
+                    (Decimal.fromInt 123)
 
                 -- No sign, no decimal places
                 , NumberSpinner.init
-                    (NumericDecimal.succeed RoundDown nat2 0)
-                    (NumericDecimal.fromInt RoundDown nat2 12345)
-                    (NumericDecimal.fromInt RoundDown nat2 123)
+                    0
+                    (Decimal.fromInt 0)
+                    (Decimal.fromInt 12345)
+                    (Decimal.fromInt 123)
                 ]
             }
         , update = update
