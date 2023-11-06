@@ -11,7 +11,7 @@ import Keyboard.Event exposing (KeyboardEvent, considerKeyboardEvent, decodeKeyb
 import Keyboard.Key as Key
 import Set
 import TypedSvg exposing (circle, g, line, rect, svg, text_)
-import TypedSvg.Attributes exposing (cx, cy, dominantBaseline, fill, fontFamily, fontSize, height, r, stroke, strokeWidth, style, textAnchor, transform, viewBox, width, x, x1, x2, y, y1, y2)
+import TypedSvg.Attributes exposing (cx, cy, dominantBaseline, fill, fontFamily, fontSize, height, r, rx, stroke, strokeWidth, style, textAnchor, transform, viewBox, width, x, x1, x2, y, y1, y2)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)
 import TypedSvg.Events as SvgEvents
 import TypedSvg.Types
@@ -235,11 +235,18 @@ viewDigit selected xV yV d =
     g []
         [ rect
             [ fill PaintNone
-            , stroke PaintNone
+            , stroke
+                (if selected then
+                    Paint Color.black
+
+                 else
+                    PaintNone
+                )
             , x (px (toFloat <| xV * digitFontSize))
             , y (px -2)
             , width (px (toFloat digitFontSize))
             , height (px (toFloat digitFontSize))
+            , rx (px 3)
             ]
             []
         , text_
@@ -249,14 +256,7 @@ viewDigit selected xV yV d =
             , dominantBaseline DominantBaselineMiddle
             , fontSize (px (toFloat digitFontSize))
             , fontFamily [ "monospace" ]
-            , fill <|
-                Paint
-                    (if selected then
-                        Color.red
-
-                     else
-                        Color.blue
-                    )
+            , fill (Paint Color.blue)
             ]
             [ SvgCore.text (String.fromChar d) ]
         ]
