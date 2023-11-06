@@ -167,6 +167,50 @@ suite =
                     in
                     Expect.equal [ '0', '9', '3', '4' ] (DN.decimalChars result)
                 )
+            , test "replace integer digit with higher digit"
+                (\_ ->
+                    let
+                        inputValue =
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+
+                        result =
+                            DN.replaceIntegerDigit 1 7 inputValue
+                    in
+                    Expect.equal [ '0', '7', '0', '0' ] (DN.integerChars result)
+                )
+            , test "replace integer digit with lower digit"
+                (\_ ->
+                    let
+                        inputValue =
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+
+                        result =
+                            DN.replaceIntegerDigit 1 2 inputValue
+                    in
+                    Expect.equal [ '0', '2', '0', '0' ] (DN.integerChars result)
+                )
+            , test "replace decimal digit with higher digit (first position)"
+                (\_ ->
+                    let
+                        inputValue =
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+
+                        result =
+                            DN.replaceDecimalDigit 0 7 inputValue
+                    in
+                    Expect.equal [ '7', '2', '3', '4' ] (DN.decimalChars result)
+                )
+            , test "replace decimal digit with higher digit (second position)"
+                (\_ ->
+                    let
+                        inputValue =
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+
+                        result =
+                            DN.replaceDecimalDigit 1 7 inputValue
+                    in
+                    Expect.equal [ '1', '7', '3', '4' ] (DN.decimalChars result)
+                )
             ]
         , describe "number spinner"
             [ test "no sign, no decimals, cursor position"

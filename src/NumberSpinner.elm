@@ -37,6 +37,19 @@ type CursorPosition
     | OnDecimal SpinnerBounds Int
 
 
+cursorPositionBounds : CursorPosition -> SpinnerBounds
+cursorPositionBounds x =
+    case x of
+        OnSign bounds ->
+            bounds
+
+        OnInteger bounds _ ->
+            bounds
+
+        OnDecimal bounds _ ->
+            bounds
+
+
 isCursorOnSign : CursorPosition -> Bool
 isCursorOnSign x =
     case x of
@@ -99,6 +112,9 @@ type Msg
     | FlipSign
     | DecreaseIntegerDigit Int
     | DecreaseDecimalDigit Int
+    | FocusSign
+    | FocusIntegerDigit Int
+    | FocusDecimalDigit Int
 
 
 moveCursorLeft : CursorPosition -> CursorPosition
@@ -155,12 +171,112 @@ moveCursorRight x =
 
 nonPropagatedKeys : List Key.Key
 nonPropagatedKeys =
-    [ Key.Up, Key.Down, Key.Left, Key.Right ]
+    [ Key.Up
+    , Key.Down
+    , Key.Left
+    , Key.Right
+    , Key.Zero
+    , Key.One
+    , Key.Two
+    , Key.Three
+    , Key.Four
+    , Key.Five
+    , Key.Six
+    , Key.Seven
+    , Key.Eight
+    , Key.Nine
+    , Key.NumpadZero
+    , Key.NumpadOne
+    , Key.NumpadTwo
+    , Key.NumpadThree
+    , Key.NumpadFour
+    , Key.NumpadFive
+    , Key.NumpadSix
+    , Key.NumpadSeven
+    , Key.NumpadEight
+    , Key.NumpadNine
+    ]
+
+
+keyCodeToDigit : Key.Key -> Maybe Int
+keyCodeToDigit x =
+    case x of
+        Key.Zero ->
+            Just 0
+
+        Key.One ->
+            Just 1
+
+        Key.Two ->
+            Just 2
+
+        Key.Three ->
+            Just 3
+
+        Key.Four ->
+            Just 4
+
+        Key.Five ->
+            Just 5
+
+        Key.Six ->
+            Just 6
+
+        Key.Seven ->
+            Just 7
+
+        Key.Eight ->
+            Just 8
+
+        Key.Nine ->
+            Just 9
+
+        Key.NumpadZero ->
+            Just 0
+
+        Key.NumpadOne ->
+            Just 1
+
+        Key.NumpadTwo ->
+            Just 2
+
+        Key.NumpadThree ->
+            Just 3
+
+        Key.NumpadFour ->
+            Just 4
+
+        Key.NumpadFive ->
+            Just 5
+
+        Key.NumpadSix ->
+            Just 6
+
+        Key.NumpadSeven ->
+            Just 7
+
+        Key.NumpadEight ->
+            Just 8
+
+        Key.NumpadNine ->
+            Just 9
+
+        _ ->
+            Nothing
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
+        FocusSign ->
+            model
+
+        FocusIntegerDigit i ->
+            { model | cursorPosition = OnInteger (cursorPositionBounds model.cursorPosition) i }
+
+        FocusDecimalDigit i ->
+            { model | cursorPosition = OnDecimal (cursorPositionBounds model.cursorPosition) i }
+
         IncreaseIntegerDigit i ->
             { model | number = DigitalNumber.increaseIntegerDigit model.number i }
 
@@ -213,7 +329,26 @@ update msg model =
                     { model | cursorPosition = moveCursorRight model.cursorPosition }
 
                 _ ->
-                    model
+                    case keyCodeToDigit keyCode of
+                        Just digit ->
+                            case model.cursorPosition of
+                                OnSign _ ->
+                                    model
+
+                                OnInteger bounds i ->
+                                    { model
+                                        | cursorPosition = moveCursorRight model.cursorPosition
+                                        , number = DigitalNumber.replaceIntegerDigit i digit model.number
+                                    }
+
+                                OnDecimal bounds i ->
+                                    { model
+                                        | cursorPosition = moveCursorRight model.cursorPosition
+                                        , number = DigitalNumber.replaceDecimalDigit i digit model.number
+                                    }
+
+                        Nothing ->
+                            model
 
 
 
@@ -230,8 +365,8 @@ digitFontSize =
     30
 
 
-viewDigit : Bool -> Int -> Float -> Char -> Svg msg
-viewDigit selected xV yV d =
+viewDigit : Msg -> Bool -> Int -> Float -> Char -> Svg Msg
+viewDigit clickMsg selected xV yV d =
     g []
         [ rect
             [ fill PaintNone
@@ -257,6 +392,8 @@ viewDigit selected xV yV d =
             , fontSize (px (toFloat digitFontSize))
             , fontFamily [ "monospace" ]
             , fill (Paint Color.blue)
+            , style "cursor: pointer"
+            , SvgEvents.onClick clickMsg
             ]
             [ SvgCore.text (String.fromChar d) ]
         ]
@@ -278,11 +415,12 @@ view model =
             else
                 0
 
-        absValueChars : List (Svg msg)
+        absValueChars : List (Svg Msg)
         absValueChars =
             List.indexedMap
                 (\i ->
                     viewDigit
+                        (FocusIntegerDigit i)
                         -- Confusing, I know, but the
                         -- currentDigitIndex is always zero-based and
                         -- includes the sign (so to speak), even if we
@@ -293,10 +431,10 @@ view model =
                 )
                 digitalNumberChars
 
-        signChar : List (Svg msg)
+        signChar : List (Svg Msg)
         signChar =
             if DigitalNumber.hasSign model.number then
-                [ viewDigit (isCursorOnSign model.cursorPosition) 0 yPos <|
+                [ viewDigit FocusSign (isCursorOnSign model.cursorPosition) 0 yPos <|
                     if DigitalNumber.isNegative model.number then
                         '-'
 
@@ -311,10 +449,11 @@ view model =
         decimalStartIdx =
             List.length digitalNumberChars + hasSignIdx
 
-        decimalDigitChars : List (Svg msg)
+        decimalDigitChars : List (Svg Msg)
         decimalDigitChars =
             if DigitalNumber.hasDecimals model.number then
                 viewDigit
+                    (FocusDecimalDigit 0)
                     False
                     decimalStartIdx
                     yPos
@@ -322,6 +461,7 @@ view model =
                     :: List.indexedMap
                         (\i d ->
                             viewDigit
+                                (FocusDecimalDigit i)
                                 (isCursorOnDecimal i model.cursorPosition)
                                 (decimalStartIdx + 1 + i)
                                 yPos
@@ -514,17 +654,28 @@ view model =
             ]
     in
     div []
-        [ text
-            ("Current: "
-                ++ DigitalNumber.valueToString model.number
-                ++ ", "
-                ++ "Min: "
-                ++ DigitalNumber.minValueToString model.number
-                ++ ", Max: "
-                ++ DigitalNumber.maxValueToString model.number
-            )
-        , svg
-            [ viewBox 0 0 400 300
+        [ svg
+            [ viewBox 0
+                0
+                (toFloat <|
+                    digitFontSize
+                        * (DigitalNumber.numberOfIntegerDigits model.number
+                            + DigitalNumber.numberOfDecimalDigits model.number
+                            + (if DigitalNumber.hasDecimals model.number then
+                                1
+
+                               else
+                                0
+                              )
+                            + (if DigitalNumber.hasSign model.number then
+                                1
+
+                               else
+                                0
+                              )
+                          )
+                )
+                (toFloat digitFontSize * 3.0)
             , svgTabindex 0
             , preventDefaultOn "keydown" <|
                 Json.Decode.map (\e -> ( HandleKeyboardEvent e, True ))

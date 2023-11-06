@@ -18,12 +18,16 @@ module DigitalNumber exposing
     , minValueToString
     , numberOfDecimalDigits
     , numberOfIntegerDigits
+    , replaceDecimalDigit
+    , replaceIntegerDigit
     , truncatedValue
     , valueToString
     )
 
+import Char exposing (toCode)
 import DecimalNumber as DN
 import List
+import List.Extra as ListExtra
 import ListUtilities exposing (leftPadList, rightPadList)
 
 
@@ -170,6 +174,50 @@ fastLog10 x =
 numberOfDecimalDigits : DigitalNumber -> Int
 numberOfDecimalDigits (DigitalNumber { value }) =
     List.length <| DN.decimalDigits <| value
+
+
+getIntegerDigit : Int -> DigitalNumber -> Int
+getIntegerDigit whichDigit value =
+    (\x -> x - 48) <| toCode <| Maybe.withDefault '0' <| ListExtra.getAt whichDigit (integerChars value)
+
+
+getDecimalDigit : Int -> DigitalNumber -> Int
+getDecimalDigit whichDigit value =
+    (\x -> x - 48) <| toCode <| Maybe.withDefault '0' <| ListExtra.getAt whichDigit (decimalChars value)
+
+
+replaceIntegerDigit : Int -> Int -> DigitalNumber -> DigitalNumber
+replaceIntegerDigit whichDigit newDigit dn =
+    modifyValue dn
+        (\value ->
+            let
+                currentDigit =
+                    getIntegerDigit whichDigit dn
+
+                addition =
+                    DN.mul
+                        (DN.fromInt (newDigit - currentDigit))
+                        (DN.tenToThePower (numberOfIntegerDigits dn - whichDigit - 1))
+            in
+            DN.add addition value
+        )
+
+
+replaceDecimalDigit : Int -> Int -> DigitalNumber -> DigitalNumber
+replaceDecimalDigit whichDigit newDigit dn =
+    modifyValue dn
+        (\value ->
+            let
+                currentDigit =
+                    getDecimalDigit whichDigit dn
+
+                addition =
+                    DN.mul
+                        (DN.fromInt (newDigit - currentDigit))
+                        (DN.tenToThePowerMinus (whichDigit + 1))
+            in
+            DN.add addition value
+        )
 
 
 integerChars : DigitalNumber -> List Char
