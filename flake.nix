@@ -1,13 +1,9 @@
 {
-  description = "CFEL P11 UI";
+  description = "Input Spinner Widget for Elm";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs?rev=5df4d78d54f7a34e9ea1f84a22b4fd9baebc68d0";
-  inputs.elm-watch = {
-    url = "github:jeslie0/elm-watch";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
-  outputs = { self, nixpkgs, elm-watch }:
+  outputs = { self, nixpkgs }:
     let
       system = "x86_64-linux";
     in
@@ -32,7 +28,6 @@
               pkgs.elmPackages.elm-language-server
               pkgs.elmPackages.elm-json
               pkgs.elmPackages.elm-test
-              elm-watch.packages.${system}.elm-watch
             ];
           };
         };

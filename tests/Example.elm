@@ -9,6 +9,7 @@ import List
 import NumberSpinner as NS
 import Test exposing (Test, describe, fuzz, test)
 
+fromStringWithDefault = Decimal.fromString >> Maybe.withDefault (Decimal.fromInt 0)
 
 suite : Test
 suite =
@@ -21,21 +22,8 @@ suite =
                         (String.fromInt x)
                         (Decimal.toString (Decimal.fromInt x))
                 )
-            , test "from integral and decimals to string" (\_ -> Expect.equal "123.45" (Decimal.toString (Decimal.fromIntegralAndDecimals 123 [ 4, 5 ])))
-            , test "from integral and decimals to string with -1.1" (\_ -> Expect.equal "-1.1" (Decimal.toString (Decimal.fromIntegralAndDecimals -1 [ 1 ])))
-            , fuzz (list (intRange 0 9))
-                "from integral and decimals to string (fuzzed)"
-                (\xs ->
-                    let
-                        value =
-                            Decimal.toString (Decimal.fromIntegralAndDecimals 123 xs)
-                    in
-                    if List.isEmpty xs then
-                        Expect.equal "123" value
-
-                    else
-                        Expect.equal ("123." ++ String.join "" (List.map String.fromInt xs)) value
-                )
+            , test "from integral and decimals to string" (\_ -> Expect.equal "123.45" (Decimal.toString (fromStringWithDefault "123.45")))
+            , test "from integral and decimals to string with -1.1" (\_ -> Expect.equal "-1.1" (Decimal.toString (fromStringWithDefault "-1.1")))
             , fuzz
                 (Fuzz.map2
                     (\integralPart decimalDigits -> ( integralPart, decimalDigits ))
@@ -46,9 +34,7 @@ suite =
                 (\( integralPart, decimalDigits ) ->
                     Expect.equal integralPart
                         (Decimal.integralPart <|
-                            Decimal.fromIntegralAndDecimals
-                                integralPart
-                                decimalDigits
+                            fromStringWithDefault (String.fromInt integralPart ++ "." ++ String.join "" (List.map String.fromInt decimalDigits))
                         )
                 )
             , fuzz
@@ -60,11 +46,7 @@ suite =
                 "get decimal decimal part"
                 (\( integralPart, decimalDigits ) ->
                     Expect.equal (List.map (\x -> Char.fromCode (x + 48)) decimalDigits)
-                        (Decimal.decimalDigits <|
-                            Decimal.fromIntegralAndDecimals
-                                integralPart
-                                decimalDigits
-                        )
+                        (Decimal.decimalDigits <| fromStringWithDefault (String.fromInt integralPart ++ "." ++ String.join "" (List.map String.fromInt decimalDigits)))
                 )
             ]
         , describe "digital numbers"
@@ -72,7 +54,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromIntegralAndDecimals 5000 [])
+                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromInt 5000)
 
                         result =
                             DN.increaseIntegerDigit inputValue 1
@@ -83,7 +65,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromIntegralAndDecimals 9000 [])
+                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromInt 9000)
 
                         result =
                             DN.increaseIntegerDigit inputValue 1
@@ -94,7 +76,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromIntegralAndDecimals 9999 [])
+                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromInt 9999)
 
                         result =
                             DN.increaseIntegerDigit inputValue 1
@@ -105,7 +87,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromIntegralAndDecimals 5000 [])
+                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromInt 5000)
 
                         result =
                             DN.decreaseIntegerDigit inputValue 2
@@ -116,7 +98,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromIntegralAndDecimals 0 [])
+                            DN.make 0 (Decimal.fromInt 0) (Decimal.fromInt 10000) (Decimal.fromInt 0)
 
                         result =
                             DN.decreaseIntegerDigit inputValue 1
@@ -127,7 +109,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.increaseDecimalDigit inputValue 1
@@ -138,7 +120,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 9, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1934")
 
                         result =
                             DN.increaseDecimalDigit inputValue 1
@@ -149,7 +131,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.decreaseDecimalDigit inputValue 1
@@ -160,7 +142,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 0, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1034")
 
                         result =
                             DN.decreaseDecimalDigit inputValue 1
@@ -171,7 +153,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.replaceIntegerDigit 1 7 inputValue
@@ -182,7 +164,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.replaceIntegerDigit 1 2 inputValue
@@ -193,7 +175,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.replaceDecimalDigit 0 7 inputValue
@@ -204,7 +186,7 @@ suite =
                 (\_ ->
                     let
                         inputValue =
-                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [ 1, 2, 3, 4 ])
+                            DN.make 4 (Decimal.fromInt 0) (Decimal.fromInt 1000) (fromStringWithDefault "500.1234")
 
                         result =
                             DN.replaceDecimalDigit 1 7 inputValue
@@ -216,9 +198,9 @@ suite =
             [ test "no sign, no decimals, cursor position"
                 (\_ ->
                     let
-                        model : NS.Model
+                        model : NS.Model NS.Msg
                         model =
-                            NS.init 0 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromIntegralAndDecimals 500 [])
+                            NS.init 0 (Decimal.fromInt 0) (Decimal.fromInt 1000) (Decimal.fromInt 500) identity
 
                         bounds : NS.SpinnerBounds
                         bounds =

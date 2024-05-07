@@ -19,68 +19,81 @@ import TypedSvg.Types exposing (Paint(..), px)
 
 
 type alias Model =
-    { spinners : List NumberSpinner.Model
+    { spinners : List (NumberSpinner.Model Msg)
     }
 
 
+main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init =
-            { spinners =
-                [ -- Sign and decimal places
-                  NumberSpinner.init
-                    2
-                    (Decimal.fromInt -100)
-                    (Decimal.fromInt 12345)
-                    (Decimal.fromIntegralAndDecimals 123 [ 4, 5 ])
+            \_ ->
+                ( { spinners =
+                        [ -- Sign and decimal places
+                          NumberSpinner.init
+                            2
+                            (Decimal.fromInt 0)
+                            (Decimal.fromInt 10)
+                            (Maybe.withDefault (Decimal.fromInt 0) <| Decimal.fromString "1.23")
+                            (SpinnerMessage 0)
 
-                -- No sign, decimal places
-                , NumberSpinner.init
-                    2
-                    (Decimal.fromInt 45)
-                    (Decimal.fromInt 12345)
-                    (Decimal.fromIntegralAndDecimals 123 [ 4, 5 ])
+                        -- No sign, decimal places
+                        , NumberSpinner.init
+                            2
+                            (Decimal.fromInt 45)
+                            (Decimal.fromInt 12345)
+                            (Maybe.withDefault (Decimal.fromInt 0) <| Decimal.fromString "123.45")
+                            (SpinnerMessage 1)
 
-                -- Sign, no decimal places
-                , NumberSpinner.init
-                    0
-                    (Decimal.fromInt -100)
-                    (Decimal.fromInt 12345)
-                    (Decimal.fromInt 123)
+                        -- Sign, no decimal places
+                        , NumberSpinner.init
+                            0
+                            (Decimal.fromInt -100)
+                            (Decimal.fromInt 12345)
+                            (Decimal.fromInt 123)
+                            (SpinnerMessage 2)
 
-                -- No sign, no decimal places
-                , NumberSpinner.init
-                    0
-                    (Decimal.fromInt 0)
-                    (Decimal.fromInt 12345)
-                    (Decimal.fromInt 123)
-                ]
-            }
+                        -- No sign, no decimal places
+                        , NumberSpinner.init
+                            0
+                            (Decimal.fromInt 0)
+                            (Decimal.fromInt 12345)
+                            (Decimal.fromInt 123)
+                            (SpinnerMessage 3)
+                        ]
+                  }
+                , Cmd.none
+                )
         , update = update
         , view = view
+        , subscriptions = \_ -> Sub.none
         }
 
 
 type Msg
-    = NumberSpinnerMsg Int NumberSpinner.Msg
+    = SpinnerMessage Int NumberSpinner.Msg
+    | NumberChange Int Decimal.DecimalNumber
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NumberSpinnerMsg idx subMsg ->
+        NumberChange idx newNumber ->
+            ( model, Cmd.none )
+
+        SpinnerMessage idx subMsg ->
             case ListExtra.getAt idx model.spinners of
                 Nothing ->
-                    model
+                    ( model, Cmd.none )
 
                 Just spinner ->
                     let
-                        newModel =
+                        ( newModel, cmd ) =
                             NumberSpinner.update subMsg spinner
                     in
-                    { model | spinners = ListExtra.setAt idx newModel model.spinners }
+                    ( { model | spinners = ListExtra.setAt idx newModel model.spinners }, cmd )
 
 
 view : Model -> Html Msg
 view model =
-    div [ style "width" "50%" ] (List.indexedMap (\i spinner -> Html.map (NumberSpinnerMsg i) <| NumberSpinner.view spinner) model.spinners)
+    div [ style "width" "50%" ] (List.indexedMap (\i spinner -> NumberSpinner.view spinner) model.spinners)
