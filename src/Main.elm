@@ -72,15 +72,11 @@ main =
 
 type Msg
     = SpinnerMessage Int NumberSpinner.Msg
-    | NumberChange Int Decimal.DecimalNumber
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NumberChange idx newNumber ->
-            ( model, Cmd.none )
-
         SpinnerMessage idx subMsg ->
             case ListExtra.getAt idx model.spinners of
                 Nothing ->
