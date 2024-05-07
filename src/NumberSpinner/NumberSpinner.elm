@@ -1,27 +1,25 @@
 module NumberSpinner.NumberSpinner exposing
-    ( CursorPosition(..)
-    , Model
-    , Msg
-    , SpinnerBounds
-    , getDecimalValue
-    , init
-    , isMutatingMsg
-    , moveCursorLeft
-    , moveCursorRight
-    , setValue
-    , update
-    , valueAsFloat
-    , view
+    ( init
+    , CursorPosition(..), Model, Msg, SpinnerBounds, getDecimalValue, isMutatingMsg, moveCursorLeft, moveCursorRight, setValue, update, valueAsFloat, view
     )
 
+{-| Provide a component that lets you manipulate decimal numbers digit-wise.
+
+
+# Construction
+
+@docs init
+
+-}
+
 import Color
-import NumberSpinner.DecimalNumber as Decimal
-import NumberSpinner.DigitalNumber as DigitalNumber
 import Html exposing (Html, div)
 import Html.Events exposing (onBlur, onFocus, preventDefaultOn)
 import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, considerKeyboardEvent)
 import Keyboard.Key as Key
+import NumberSpinner.DecimalNumber as Decimal
+import NumberSpinner.DigitalNumber as DigitalNumber
 import TypedSvg exposing (circle, g, line, rect, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, dominantBaseline, fill, fontFamily, fontSize, height, r, rx, stroke, style, textAnchor, transform, viewBox, width, x, x1, x2, y, y1, y2)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)
