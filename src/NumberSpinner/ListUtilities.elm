@@ -1,4 +1,4 @@
-module ListUtilities exposing (..)
+module NumberSpinner.ListUtilities exposing (..)
 
 
 leftPadList : List a -> a -> Int -> List a

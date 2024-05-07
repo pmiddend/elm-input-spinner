@@ -1,4 +1,4 @@
-module NumberSpinner exposing
+module NumberSpinner.NumberSpinner exposing
     ( CursorPosition(..)
     , Model
     , Msg
@@ -15,8 +15,8 @@ module NumberSpinner exposing
     )
 
 import Color
-import DecimalNumber as Decimal
-import DigitalNumber
+import NumberSpinner.DecimalNumber as Decimal
+import NumberSpinner.DigitalNumber as DigitalNumber
 import Html exposing (Html, div)
 import Html.Events exposing (onBlur, onFocus, preventDefaultOn)
 import Json.Decode

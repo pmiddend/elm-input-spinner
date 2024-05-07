@@ -2,8 +2,8 @@ module Main exposing (..)
 
 import Browser
 import Color
-import DecimalNumber as Decimal
-import DigitalNumber
+import NumberSpinner.DecimalNumber as Decimal
+import NumberSpinner.DigitalNumber
 import Html exposing (Html, button, div, input, span, text)
 import Html.Attributes exposing (style, type_)
 import Html.Events exposing (on)
@@ -11,7 +11,7 @@ import Json.Decode
 import Keyboard.Event exposing (KeyboardEvent, decodeKeyboardEvent)
 import Keyboard.Key as Key
 import List.Extra as ListExtra
-import NumberSpinner
+import NumberSpinner.NumberSpinner as NumberSpinner
 import TypedSvg exposing (circle, svg, text_)
 import TypedSvg.Attributes exposing (cx, cy, fill, fontFamily, fontSize, r, stroke, strokeWidth, viewBox, x, y)
 import TypedSvg.Core as SvgCore exposing (Svg, attribute)

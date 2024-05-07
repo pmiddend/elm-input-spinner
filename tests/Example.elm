@@ -1,12 +1,12 @@
 module Example exposing (..)
 
 import Char
-import DecimalNumber as Decimal
-import DigitalNumber as DN
+import NumberSpinner.DecimalNumber as Decimal
+import NumberSpinner.DigitalNumber as DN
 import Expect
 import Fuzz exposing (int, intRange, list)
 import List
-import NumberSpinner as NS
+import NumberSpinner.NumberSpinner as NS
 import Test exposing (Test, describe, fuzz, test)
 
 fromStringWithDefault = Decimal.fromString >> Maybe.withDefault (Decimal.fromInt 0)

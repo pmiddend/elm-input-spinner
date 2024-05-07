@@ -1,4 +1,4 @@
-module DecimalNumber exposing
+module NumberSpinner.DecimalNumber exposing
     ( DecimalNumber
     , add
     , decimalDigits

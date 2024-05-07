@@ -1,4 +1,4 @@
-module DigitalNumber exposing
+module NumberSpinner.DigitalNumber exposing
     ( DecimalType
     , DigitalNumber
     , decimalChars
@@ -26,10 +26,10 @@ module DigitalNumber exposing
 -}
 
 import Char exposing (toCode)
-import DecimalNumber as DN
+import NumberSpinner.DecimalNumber as DN
 import List
 import List.Extra as ListExtra
-import ListUtilities exposing (leftPadList, rightPadList)
+import NumberSpinner.ListUtilities exposing (leftPadList, rightPadList)
 
 
 type alias DecimalType =
