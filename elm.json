@@ -1,6 +1,6 @@
 {
     "type": "package",
-    "name": "pmiddend/elm-input-spinner",
+    "name": "pmiddend/elm-number-spinner",
     "summary": "Component that allows the user to manipulate single digits in decimal numbers",
     "license": "MIT",
     "version": "1.0.0",
