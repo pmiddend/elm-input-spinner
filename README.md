@@ -2,7 +2,7 @@
 
 This Elm component allows displaying and editing *single digits* inside *decimal numbers* (positive and negative). Here's a little video on how it works:
 
-![How it works](./howitworks.gif)
+![How it works](https://github.com/pmiddend/elm-number-spinner/raw/main/howitworks.gif)
 
 What's there:
 
@@ -13,6 +13,12 @@ What's there:
 What's missing:
 
 - Styling
+
+## Usage
+
+Use the usual Elm Architecture types for `Model, view, update, init, Msg` inside [NumberSpinner.NumberSpinner](http://package.elm-lang.org/packages/pmiddend/elm-input-spinner/1.0.0/NumberSpinner-NumberSpinner) to use it. Note that internally, this library uses the excellent [decimal](https://package.elm-lang.org/packages/prikhi/decimal/latest) library to represent numbers. This is somewhat opaque to you as a user, as you can use the functions from [NumberSpinner.DecimalNumber](http://package.elm-lang.org/packages/pmiddend/elm-input-spinner/1.0.0/NumberSpinner-DecimalNumber) to construct/deconstruct decimal numbers.
+
+To get to the value of the spinner (after an update message), call a function like `NumberSpinner.valueAsFloat` and process it further.
 
 ## Example code
 
@@ -39,7 +45,7 @@ main =
                             (Decimal.fromInt 0)
                             (Decimal.fromInt 10)
                             (Maybe.withDefault (Decimal.fromInt 0) <| Decimal.fromString "1.23")
-                            (SpinnerMessage 0)
+                            SpinnerMessage
                   }
                 , Cmd.none
                 )

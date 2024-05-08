@@ -1,41 +1,49 @@
 module NumberSpinner.DigitalNumber exposing
-    ( DecimalType
-    , DigitalNumber
-    , decimalChars
-    , decreaseDecimalDigit
-    , decreaseIntegerDigit
-    , decreaseSign
-    , getValue
-    , hasDecimals
-    , hasSign
-    , increaseDecimalDigit
-    , increaseIntegerDigit
-    , increaseSign
-    , integerChars
-    , isNegative
-    , make
-    , modifyValue
-    , numberOfDecimalDigits
-    , numberOfIntegerDigits
-    , replaceDecimalDigit
-    , replaceIntegerDigit
-    , valueAsFloat
+    ( DecimalType, DigitalNumber
+    , decimalChars, make
+    , decreaseDecimalDigit, decreaseIntegerDigit, decreaseSign, increaseSign, increaseIntegerDigit, increaseDecimalDigit, modifyValue, replaceDecimalDigit, replaceIntegerDigit
+    , getValue, hasDecimals, hasSign, integerChars, isNegative, numberOfDecimalDigits, numberOfIntegerDigits, valueAsFloat
     )
 
 {-| A "digital number" (surely a bad term) is a number where you have read/write access to its individual "digits" (decimal and integral). This module provides this data type. A digital number has a min and a max value as well (which determines the integral digits of the number), but you have to specify the number of decimal digits, since it cannot be inferred from min/max.
+
+
+# Types
+
+@docs DecimalType, DigitalNumber
+
+
+# Construct
+
+@docs decimalChars, make
+
+
+# Mutate
+
+@docs decreaseDecimalDigit, decreaseIntegerDigit, decreaseSign, increaseSign, increaseIntegerDigit, increaseDecimalDigit, modifyValue, replaceDecimalDigit, replaceIntegerDigit
+
+
+# Deconstruct
+
+@docs getValue, hasDecimals, hasSign, integerChars, isNegative, numberOfDecimalDigits, numberOfIntegerDigits, valueAsFloat
+
 -}
 
 import Char exposing (toCode)
-import NumberSpinner.DecimalNumber as DN
 import List
 import List.Extra as ListExtra
+import NumberSpinner.DecimalNumber as DN
 import NumberSpinner.ListUtilities exposing (leftPadList, rightPadList)
 
 
+{-| Type alias for the decimal type used
+-}
 type alias DecimalType =
     DN.DecimalNumber
 
 
+{-| Represents a decimal number which has bounds on the decimal places and the value contained
+-}
 type DigitalNumber
     = DigitalNumber
         { minValue : DecimalType
@@ -52,6 +60,8 @@ getValue (DigitalNumber { value }) =
     value
 
 
+{-| Convert the decimal number to the approximate floating point value
+-}
 valueAsFloat : DigitalNumber -> Float
 valueAsFloat =
     DN.toFloat << getValue

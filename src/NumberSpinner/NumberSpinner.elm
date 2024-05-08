@@ -1,14 +1,31 @@
 module NumberSpinner.NumberSpinner exposing
-    ( init
-    , CursorPosition(..), Model, Msg, SpinnerBounds, getDecimalValue, isMutatingMsg, moveCursorLeft, moveCursorRight, setValue, update, valueAsFloat, view
+    ( Model, Msg, init, update, view, isMutatingMsg
+    , moveCursorLeft, moveCursorRight, setValue
+    , getDecimalValue, valueAsFloat
+    , CursorPosition(..), SpinnerBounds
     )
 
 {-| Provide a component that lets you manipulate decimal numbers digit-wise.
 
 
-# Construction
+# Elm Architecture stuff
 
-@docs init
+@docs Model, Msg, init, update, view, isMutatingMsg
+
+
+# Modify
+
+@docs moveCursorLeft, moveCursorRight, setValue
+
+
+# Deconstruct
+
+@docs getDecimalValue, valueAsFloat
+
+
+# Internal types exposed for testing
+
+@docs CursorPosition, SpinnerBounds
 
 -}
 
@@ -103,6 +120,8 @@ isCursorOnDecimal i x =
             False
 
 
+{-| Elm Architecture model structure
+-}
 type alias Model msg =
     { number : DigitalNumber.DigitalNumber
     , cursorPosition : CursorPosition
@@ -113,11 +132,28 @@ type alias Model msg =
     }
 
 
+{-| Convert the decimal number to the approximate floating point value
+-}
 valueAsFloat : Model msg -> Float
 valueAsFloat { number } =
     DigitalNumber.valueAsFloat number
 
 
+{-| Initialize the number spinner with the number of decimal places, the minimum bound, maximum bound, current value and a converter function into your message type. Example
+
+    NumberSpinner.init
+        -- two odecimal places
+        2
+        -- minimum value (inclusive)
+        (Decimal.fromInt 0)
+        -- maximum value (inclusive)
+        (Decimal.fromInt 10)
+        -- current value (inited from a string, which might fail because it's at runtime)
+        (Maybe.withDefault (Decimal.fromInt 0) <| Decimal.fromString "1.23")
+        -- convert to my custom SpinnerMessage
+        SpinnerMessage
+
+-}
 init : Int -> Decimal.DecimalNumber -> Decimal.DecimalNumber -> Decimal.DecimalNumber -> (Msg -> msg) -> Model msg
 init decimalPlaces minValue maxValue currentValue toMsg =
     let
@@ -138,6 +174,8 @@ init decimalPlaces minValue maxValue currentValue toMsg =
     }
 
 
+{-| Elm Architecture Msg type
+-}
 type Msg
     = HandleKeyboardEvent KeyboardEvent
     | IncreaseIntegerDigit Int
@@ -151,6 +189,11 @@ type Msg
     | SetFocus Bool
 
 
+{-| Modify cursor position to move to the left, if possible (skipping "boundaries" between sign, integral and decimal places)
+
+This is exposed mainly for the tests.
+
+-}
 moveCursorLeft : CursorPosition -> CursorPosition
 moveCursorLeft x =
     case x of
@@ -179,6 +222,11 @@ moveCursorLeft x =
                 OnDecimal bounds (i - 1)
 
 
+{-| Modify cursor position to move to the right, if possible (skipping "boundaries" between sign, integral and decimal places)
+
+This is exposed mainly for the tests.
+
+-}
 moveCursorRight : CursorPosition -> CursorPosition
 moveCursorRight x =
     case x of
@@ -304,6 +352,8 @@ keyCodeToDigit x =
             Nothing
 
 
+{-| Check if the incoming Msg actually mutates the decimal number value, or if it is just moving the cursor around, for example
+-}
 isMutatingMsg : Msg -> Bool
 isMutatingMsg msg =
     case msg of
@@ -342,6 +392,8 @@ isMutatingMsg msg =
             False
 
 
+{-| Elm Architecture update function
+-}
 update : Msg -> Model msg -> ( Model msg, Cmd msg )
 update msg model =
     case msg of
@@ -480,16 +532,22 @@ digitFontSize =
     30
 
 
+{-| Get current "digital number" value of the spinner
+-}
 getValue : Model msg -> DigitalNumber.DigitalNumber
 getValue m =
     m.number
 
 
+{-| Get current decimal value of the spinner
+-}
 getDecimalValue : Model msg -> Decimal.DecimalNumber
 getDecimalValue m =
     DigitalNumber.getValue (getValue m)
 
 
+{-| Set current "digital number" value of the spinner
+-}
 setValue : Model msg -> Decimal.DecimalNumber -> Model msg
 setValue m n =
     -- This has no validation!
@@ -549,6 +607,8 @@ viewDigit hasFocus clickMsg selected xV d =
         ]
 
 
+{-| Elm architecture view function
+-}
 view : Model msg -> Html msg
 view model =
     let

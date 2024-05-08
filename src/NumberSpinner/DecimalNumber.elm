@@ -1,22 +1,38 @@
 module NumberSpinner.DecimalNumber exposing
     ( DecimalNumber
-    , add
-    , decimalDigits
-    , fromFloat
-    , fromInt
-    , fromString
-    , gt
-    , integralPart
-    , lt
-    , mul
-    , subtract
-    , tenToThePower
-    , tenToThePowerMinus
-    , toFloat
-    , toString
+    , fromFloat, fromInt, fromString, tenToThePowerMinus, tenToThePower, toFloat, toString
+    , add, mul, subtract
+    , decimalDigits, integralPart
+    , gt, lt
     )
 
 {-| Since the spinner isn't based on float/double, we need a module that provides us with an "infinite precision" numeric type. This module uses elm-decimal for that purpose.
+
+
+# Types
+
+@docs DecimalNumber
+
+
+# Construct
+
+@docs fromFloat, fromInt, fromString, tenToThePowerMinus, tenToThePower, toFloat, toString
+
+
+# Combine
+
+@docs add, mul, subtract
+
+
+# Deconstruct
+
+@docs decimalDigits, integralPart
+
+
+# Compare
+
+@docs gt, lt
+
 -}
 
 import Decimal
@@ -24,6 +40,8 @@ import List
 import String.Extra as StringExtra
 
 
+{-| Type alias for the Decimal library (to make the choice of library opaque at this point)
+-}
 type alias DecimalNumber =
     Decimal.Decimal
 
@@ -49,6 +67,8 @@ toFloat =
     Decimal.toFloat
 
 
+{-| Convert decimal to string
+-}
 toString : DecimalNumber -> String
 toString =
     Decimal.toString
@@ -82,16 +102,22 @@ gt =
     Decimal.gt
 
 
+{-| Add two decimal numbers
+-}
 add : DecimalNumber -> DecimalNumber -> DecimalNumber
 add =
     Decimal.add
 
 
+{-| Subtract two decimal numbers
+-}
 subtract : DecimalNumber -> DecimalNumber -> DecimalNumber
 subtract =
     Decimal.sub
 
 
+{-| Multiply two decimal numbers
+-}
 mul : DecimalNumber -> DecimalNumber -> DecimalNumber
 mul =
     Decimal.mul
